@@ -1,8 +1,8 @@
 from typing import Optional
-from siibra.atlas import Atlas
-from siibra.space import Space
-from siibra.parcellation import Parcellation
-from siibra.region import Region
+from siibra.core import Atlas, Space, Parcellation, Region
+from urllib.parse import quote
+from numpy import int32
+min_int32=-2_147_483_648
 
 import math
 from .util import encode_number,separator
@@ -12,8 +12,8 @@ root_url='https://atlases.ebrains.eu/viewer/'
 def sanitize_id(id: str):
     return id.replace('/', ':')
 
-def run(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region]):
-
+def run(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region], ignore_warning=False):
+    print(f'processing {region.name}')
     nav_string='/@:0.0.0.-W000.._eCwg.2-FUe3._-s_W.2_evlu..7LIx..{encoded_nav}..1LSm'
     return_url='{root_url}#/a:{atlas_id}/t:{template_id}/p:{parc_id}'.format(
         root_url    = root_url,
@@ -28,16 +28,25 @@ def run(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region]
         raise IndexError(f'region has no labels. Cannot generate URL')
     
     label=list(region.labels)[0]
-    hemisphere='left hemisphere' if 'left' in region.name else 'right hemisphere' if 'right' in region else 'whole brain'
+    hemisphere='left hemisphere' if 'left' in region.name else 'right hemisphere' if 'right' in region.name else 'whole brain'
     ng_id=get_ng_id(atlas.id,space.id,parc.id,hemisphere)
 
-    return_url=f'{return_url}/r:{ng_id}::{encode_number(label)}'
+    return_url=f'{return_url}/r:{quote(ng_id)}::{encode_number(label)}'
 
-    spatialprops=region.spatialprops(space)
-    if len(spatialprops) == 0:
+    try:
+      result_props=region.spatial_props(space)
+      result_props_components =result_props.get('components', [])
+      if len(result_props_components) == 0:
         return return_url + nav_string.format(encoded_nav='0.0.0')
-    centroid=spatialprops[0].get('centroid_mm')
-    print('centroid', centroid)
+    except Exception as e:
+      print(f'Cannot get_spatial_props {str(e)}')
+      if not ignore_warning:
+        raise e
+      return return_url + nav_string.format(encoded_nav='0.0.0')
+
+    centroid=result_props_components[0].get('centroid')
+    print('centroid', region, centroid)
+
     encoded_centroid=separator.join([ encode_number(math.floor(val * 1e6)) for val in centroid ])
     return_url=f'{return_url}/@:0.0.0.-W000.._eCwg.2-FUe3._-s_W.2_evlu..7LIx..{encoded_centroid}..1LSm'
     return return_url
@@ -151,8 +160,12 @@ def get_hash(atlas_id: str, t_id: str, parc_id: str, hemisphere: str):
     full_string=f'{atlas_id}{t_id}{parc_id}{hemisphere}'
     return_val=0
     for char in full_string:
-        return_val=return_val << 5 - return_val + ord(char)
-    return '_' + hex(return_val)[3:]
+        shifted_5 = int32((return_val - min_int32) << 5)
+        return_val = int32(shifted_5 - return_val + ord(char))
+        return_val = return_val & return_val
+    hex_val = hex(return_val)
+    val = '_' + hex_val[3:]
+    return val
 
 def get_ng_id(atlas_id: str, t_id: str, parc_id: str, hemisphere: str):
     backwards_key=backwards_compat_dict.get(atlas_id, {}).get(t_id, {}).get(parc_id, {}).get(hemisphere)
