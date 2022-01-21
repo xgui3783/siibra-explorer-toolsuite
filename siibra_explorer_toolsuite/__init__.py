@@ -2,6 +2,7 @@ from typing import Optional
 from siibra.core import Atlas, Space, Parcellation, Region
 from urllib.parse import quote
 from numpy import int32
+import numpy as np
 min_int32=-2_147_483_648
 
 import math
@@ -34,15 +35,15 @@ def run(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region]
     return_url=f'{return_url}/r:{quote(ng_id)}::{encode_number(label)}'
 
     try:
-      result_props=region.spatial_props(space)
-      result_props_components =result_props.get('components', [])
-      if len(result_props_components) == 0:
-        return return_url + nav_string.format(encoded_nav='0.0.0')
+        result_props=region.spatial_props(space)
+        result_props_components =result_props.get('components', [])
+        if len(result_props_components) == 0:
+            return return_url + nav_string.format(encoded_nav='0.0.0')
     except Exception as e:
-      print(f'Cannot get_spatial_props {str(e)}')
-      if not ignore_warning:
-        raise e
-      return return_url + nav_string.format(encoded_nav='0.0.0')
+        print(f'Cannot get_spatial_props {str(e)}')
+        if not ignore_warning:
+            raise e
+        return return_url + nav_string.format(encoded_nav='0.0.0')
 
     centroid=result_props_components[0].get('centroid')
     print('centroid', region, centroid)
@@ -161,7 +162,9 @@ def get_hash(atlas_id: str, t_id: str, parc_id: str, hemisphere: str):
     return_val=0
     for char in full_string:
         shifted_5 = int32((return_val - min_int32) << 5)
-        return_val = int32(shifted_5 - return_val + ord(char))
+        with np.errstate(over="ignore"):
+            # overflowing is expected and in fact the whole reason why convert number to int32
+            return_val = int32(shifted_5 - return_val + ord(char))
         return_val = return_val & return_val
     hex_val = hex(return_val)
     val = '_' + hex_val[3:]
