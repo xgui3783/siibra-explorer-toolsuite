@@ -3,6 +3,7 @@ from siibra.core import Atlas, Space, Parcellation, Region
 from urllib.parse import quote
 from numpy import int32
 import numpy as np
+from siibra import atlases
 min_int32=-2_147_483_648
 
 import math
@@ -13,9 +14,29 @@ root_url='https://atlases.ebrains.eu/viewer/'
 def sanitize_id(id: str):
     return id.replace('/', ':')
 
+def get_perspective_zoom(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region]):
+    if atlas is atlases['rat'] or atlas is atlases['mouse']:
+        return 200000
+    return 2000000
+
+def get_zoom(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region]):
+    if atlas is atlases['rat'] or atlas is atlases['mouse']:
+        return 35000
+    return 350000
+
+
 def run(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region], ignore_warning=False):
     print(f'processing {region.name}')
-    nav_string='/@:0.0.0.-W000.._eCwg.2-FUe3._-s_W.2_evlu..7LIx..{encoded_nav}..1LSm'
+
+    zoom = get_zoom(atlas, space, parc, region)
+    pzoom = get_perspective_zoom(atlas, space, parc, region)
+    
+    zoom_kwargs = {
+        "encoded_pzoom": encode_number(pzoom, False),
+        "encoded_zoom": encode_number(zoom, False)
+    }
+    nav_string='/@:0.0.0.-W000.._eCwg.2-FUe3._-s_W.2_evlu..{encoded_pzoom}..{encoded_nav}..{encoded_zoom}'
+
     return_url='{root_url}#/a:{atlas_id}/t:{template_id}/p:{parc_id}'.format(
         root_url    = root_url,
         atlas_id    = sanitize_id(atlas.id),
@@ -23,7 +44,7 @@ def run(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region]
         parc_id     = sanitize_id(parc.id),
     )
     if region is None:
-        return return_url + nav_string.format(encoded_nav='0.0.0')
+        return return_url + nav_string.format(encoded_nav='0.0.0', **zoom_kwargs)
     
     if len(region.labels) == 0:
         raise IndexError(f'region has no labels. Cannot generate URL')
@@ -38,18 +59,18 @@ def run(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region]
         result_props=region.spatial_props(space)
         result_props_components =result_props.get('components', [])
         if len(result_props_components) == 0:
-            return return_url + nav_string.format(encoded_nav='0.0.0')
+            return return_url + nav_string.format(encoded_nav='0.0.0', **zoom_kwargs)
     except Exception as e:
         print(f'Cannot get_spatial_props {str(e)}')
         if not ignore_warning:
             raise e
-        return return_url + nav_string.format(encoded_nav='0.0.0')
+        return return_url + nav_string.format(encoded_nav='0.0.0', **zoom_kwargs)
 
     centroid=result_props_components[0].get('centroid')
     print('centroid', region, centroid)
 
     encoded_centroid=separator.join([ encode_number(math.floor(val * 1e6)) for val in centroid ])
-    return_url=f'{return_url}/@:0.0.0.-W000.._eCwg.2-FUe3._-s_W.2_evlu..7LIx..{encoded_centroid}..1LSm'
+    return_url=return_url + nav_string.format(encoded_nav=encoded_centroid, **zoom_kwargs)
     return return_url
     
 def main():
