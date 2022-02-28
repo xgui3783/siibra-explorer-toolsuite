@@ -1,10 +1,14 @@
 from typing import Optional
+import siibra
 from siibra.core import Atlas, Space, Parcellation, Region
 from urllib.parse import quote
 from numpy import int32
 import numpy as np
 from siibra import atlases
 min_int32=-2_147_483_648
+
+if siibra.__version__ != "0.3a6":
+    print(f"Warning: siibra.__version__ {siibra.__version__} != 0.3a6, this module may not work properly.")
 
 import math
 from .util import encode_number,separator
@@ -175,6 +179,49 @@ backwards_compat_dict={
             "right hemisphere": "right"
         }
     },
+  },
+
+
+  # allen mouse
+  'juelich/iav/atlas/v1.0.0/2': {
+    # ccf v3
+    "minds/core/referencespace/v1.0.0/265d32a0-3d84-40a5-926f-bf89f68212b9": {
+      # ccf v3 2017
+      "minds/core/parcellationatlas/v1.0.0/05655b58-3b6f-49db-b285-64b5a0276f83": {
+        "whole brain": "v3_2017",
+        "left hemisphere": "v3_2017",
+        "right hemisphere": "v3_2017"
+      },
+      # ccf v3 2015,
+      "minds/core/parcellationatlas/v1.0.0/39a1384b-8413-4d27-af8d-22432225401f": {
+        "whole brain": "atlas",
+        "left hemisphere": "atlas",
+        "right hemisphere": "atlas"
+      }
+    }
+  },
+  # waxholm
+  "minds/core/parcellationatlas/v1.0.0/522b368e-49a3-49fa-88d3-0870a307974a": {
+    "minds/core/referencespace/v1.0.0/d5717c4a-0fa1-46e6-918c-b8003069ade8": {
+      # v1.01
+      "minds/core/parcellationatlas/v1.0.0/11017b35-7056-4593-baad-3934d211daba": {
+        "whole brain": "v1_01",
+        "left hemisphere": "v1_01",
+        "right hemisphere": "v1_01"
+      },
+      # v2
+      "minds/core/parcellationatlas/v1.0.0/2449a7f0-6dd0-4b5a-8f1e-aec0db03679d": {
+        "whole brain": "v2",
+        "left hemisphere": "v2",
+        "right hemisphere": "v2"
+      },
+      # v3
+      "minds/core/parcellationatlas/v1.0.0/ebb923ba-b4d5-4b82-8088-fa9215c2e1fe": {
+        "whole brain": "v3",
+        "left hemisphere": "v3",
+        "right hemisphere": "v3"
+      }
+    }
   }
 }
 
