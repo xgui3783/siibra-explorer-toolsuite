@@ -1,1 +1,1 @@
-siibra==0.3a6
+siibra>=0.3a6,<0.4

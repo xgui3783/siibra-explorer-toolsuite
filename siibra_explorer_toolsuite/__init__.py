@@ -15,7 +15,7 @@ if siibra.__version__ != "0.3a6":
 import math
 from .util import encode_number,separator
 
-root_url='https://atlases.ebrains.eu/viewer/'
+default_root_url='https://atlases.ebrains.eu/viewer/'
 
 def sanitize_id(id: str):
     return id.replace('/', ':')
@@ -30,9 +30,20 @@ def get_zoom(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Re
         return 35000
     return 350000
 
+supported_prefix = (
+  "nifti://",
+  "swc://",
+  "precomputed://",
+)
 
-def run(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region], ignore_warning=False):
-    print(f'processing {region.name}')
+def run(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region]=None, *, root_url=default_root_url, external_url:str=None, ignore_warning=False):
+
+    overlay_url = None
+    if external_url:
+        assert any([external_url.startswith(prefix) for prefix in supported_prefix]), f"url needs to start with {(' , '.join(supported_prefix))}"
+        overlay_url = '/x-overlay-layer:{url}'.format(
+            url=external_url.replace("/", "%2F")
+        )
 
     zoom = get_zoom(atlas, space, parc, region)
     pzoom = get_perspective_zoom(atlas, space, parc, region)
@@ -43,11 +54,12 @@ def run(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region]
     }
     nav_string='/@:0.0.0.-W000.._eCwg.2-FUe3._-s_W.2_evlu..{encoded_pzoom}..{encoded_nav}..{encoded_zoom}'
 
-    return_url='{root_url}#/a:{atlas_id}/t:{template_id}/p:{parc_id}'.format(
+    return_url='{root_url}#/a:{atlas_id}/t:{template_id}/p:{parc_id}{overlay_url}'.format(
         root_url    = root_url,
         atlas_id    = sanitize_id(atlas.id),
         template_id = sanitize_id(space.id),
         parc_id     = sanitize_id(parc.id),
+        overlay_url = overlay_url if overlay_url else "",
     )
     if region is None:
         return return_url + nav_string.format(encoded_nav='0.0.0', **zoom_kwargs)
