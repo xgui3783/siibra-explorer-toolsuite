@@ -251,12 +251,12 @@ backwards_compat_dict={
 def get_hash(atlas_id: str, t_id: str, parc_id: str, hemisphere: str):
     full_string=f'{atlas_id}{t_id}{parc_id}{hemisphere}'
     return_val=0
-    for char in full_string:
-        shifted_5 = int32((return_val - min_int32) << 5)
-        with np.errstate(over="ignore"):
+    with np.errstate(over="ignore"):
+        for char in full_string:
             # overflowing is expected and in fact the whole reason why convert number to int32
+            shifted_5 = int32((return_val - min_int32) << 5)
             return_val = int32(shifted_5 - return_val + ord(char))
-        return_val = return_val & return_val
+            return_val = return_val & return_val
     hex_val = hex(return_val)
     val = '_' + hex_val[3:]
     return val
