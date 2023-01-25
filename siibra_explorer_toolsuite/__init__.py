@@ -6,6 +6,7 @@ from numpy import int32
 import numpy as np
 from siibra import atlases
 min_int32=-2_147_483_648
+max_int32=2_147_483_647
 
 BIGBRAIN = siibra.spaces['bigbrain']
 
@@ -254,7 +255,12 @@ def get_hash(atlas_id: str, t_id: str, parc_id: str, hemisphere: str):
     with np.errstate(over="ignore"):
         for char in full_string:
             # overflowing is expected and in fact the whole reason why convert number to int32
-            shifted_5 = int32((return_val - min_int32) << 5)
+            
+            # in windows, int32((0 - min_int32) << 5), rather than overflow to wraper around, raises OverflowError
+            shifted_5 = int32(
+                (return_val - min_int32) if return_val > max_int32 else return_val
+            << 5)
+
             return_val = int32(shifted_5 - return_val + ord(char))
             return_val = return_val & return_val
     hex_val = hex(return_val)
