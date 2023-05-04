@@ -1,17 +1,20 @@
 from typing import Optional
 import siibra
-from siibra.core import Atlas, Space, Parcellation, Region
+from siibra.core.atlas import Atlas
+from siibra.core.space import Space
+from siibra.core.parcellation import Parcellation
+from siibra.core.region import Region
 from urllib.parse import quote
 from numpy import int32
 import numpy as np
-from siibra import atlases
+
 min_int32=-2_147_483_648
 max_int32=2_147_483_647
 
 BIGBRAIN = siibra.spaces['bigbrain']
 
-if siibra.__version__ != "0.3a6":
-    print(f"Warning: siibra.__version__ {siibra.__version__} != 0.3a6, this module may not work properly.")
+if not ("0.4a35" <= siibra.__version__ <= "0.4a47"):
+    print(f"Warning: siibra.__version__ {siibra.__version__} siibra>=0.4a35,<=0.4a47, this module may not work properly.")
 
 import math
 from .util import encode_number,separator
@@ -22,12 +25,12 @@ def sanitize_id(id: str):
     return id.replace('/', ':')
 
 def get_perspective_zoom(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region]):
-    if atlas is atlases['rat'] or atlas is atlases['mouse']:
+    if atlas is siibra.atlases['rat'] or atlas is siibra.atlases['mouse']:
         return 200000
     return 2000000
 
 def get_zoom(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region]):
-    if atlas is atlases['rat'] or atlas is atlases['mouse']:
+    if atlas is siibra.atlases['rat'] or atlas is siibra.atlases['mouse']:
         return 35000
     return 350000
 
@@ -65,28 +68,30 @@ def run(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region]
     if region is None:
         return return_url + nav_string.format(encoded_nav='0.0.0', **zoom_kwargs)
     
-    hemisphere='left hemisphere' if 'left' in region.name else 'right hemisphere' if 'right' in region.name else 'whole brain'
+    # labelled_map = parc.get_map(space, siibra.MapType.LABELLED)
+    # assert labelled_map
+    
+    # hemisphere='left hemisphere' if 'left' in region.name else 'right hemisphere' if 'right' in region.name else 'whole brain'
 
-    if space is BIGBRAIN:
-        voi = [v for v in region.volumes if v.space is BIGBRAIN]
-        assert len(voi) == 1, f"For big brain volumes, there must be 1 and only 1 region.volumes in big space"
-        hemisphere = voi[0].id
-        label = voi[0].detail.get("neuroglancer/precomputed", {}).get("labelIndex")
-        if label is None:
-            raise Exception(f"big brain cannot determine label index")
-    else:
-        if len(region.labels) == 0:
-            raise IndexError(f'region has no labels. Cannot generate URL')
-        label=list(region.labels)[0]
+    # if space is BIGBRAIN:
+    #     voi = [v for v in region.volumes if v.space is BIGBRAIN]
+    #     assert len(voi) == 1, f"For big brain volumes, there must be 1 and only 1 region.volumes in big space"
+    #     hemisphere = voi[0].id
+    #     label = voi[0].detail.get("neuroglancer/precomputed", {}).get("labelIndex")
+    #     if label is None:
+    #         raise Exception(f"big brain cannot determine label index")
+    # else:
+    #     if len(region.labels) == 0:
+    #         raise IndexError(f'region has no labels. Cannot generate URL')
+    #     label=list(region.labels)[0]
 
-    ng_id=get_ng_id(atlas.id,space.id,parc.id,hemisphere)
+    # ng_id=get_ng_id(atlas.id,space.id,parc.id,hemisphere)
 
-    return_url=f'{return_url}/r:{quote(ng_id)}::{encode_number(label)}'
+    # return_url=f'{return_url}/r:{quote(ng_id)}::{encode_number(label)}'
 
     try:
         result_props=region.spatial_props(space)
-        result_props_components =result_props.get('components', [])
-        if len(result_props_components) == 0:
+        if len(result_props.components) == 0:
             return return_url + nav_string.format(encoded_nav='0.0.0', **zoom_kwargs)
     except Exception as e:
         print(f'Cannot get_spatial_props {str(e)}')
@@ -94,7 +99,7 @@ def run(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region]
             raise e
         return return_url + nav_string.format(encoded_nav='0.0.0', **zoom_kwargs)
 
-    centroid=result_props_components[0].get('centroid')
+    centroid=result_props.components[0].centroid
     print('centroid', region, centroid)
 
     encoded_centroid=separator.join([ encode_number(math.floor(val * 1e6)) for val in centroid ])
