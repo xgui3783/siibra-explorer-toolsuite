@@ -30,7 +30,7 @@ jobs:
         atlas = siibra.atlases['human']
         space = siibra.spaces['mni152']
         parcellation = siibra.parcellations['julich 2.9']
-        region = parcellation.decode_region('hoc4d left')
+        region = parcellation.get_region('hoc4d left')
 
         url = siibra_explorer_toolsuite.run(atlas, space, parcellation, region)
         print(url)
