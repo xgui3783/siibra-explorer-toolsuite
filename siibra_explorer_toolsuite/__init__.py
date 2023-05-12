@@ -4,6 +4,7 @@ from siibra.core.atlas import Atlas
 from siibra.core.space import Space
 from siibra.core.parcellation import Parcellation
 from siibra.core.region import Region
+from siibra.features.feature import Feature
 from urllib.parse import quote
 from numpy import int32
 import numpy as np
@@ -40,7 +41,7 @@ supported_prefix = (
   "precomputed://",
 )
 
-def run(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region]=None, *, root_url=default_root_url, external_url:str=None, ignore_warning=False):
+def run(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region]=None, *, root_url=default_root_url, external_url:str=None, feature: Feature=None, ignore_warning=False):
 
     overlay_url = None
     if external_url:
@@ -65,6 +66,10 @@ def run(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region]
         parc_id     = sanitize_id(parc.id),
         overlay_url = overlay_url if overlay_url else "",
     )
+
+    if feature is not None:
+        return_url = return_url + f"/f:{sanitize_id(feature.id)}"
+
     if region is None:
         return return_url + nav_string.format(encoded_nav='0.0.0', **zoom_kwargs)
     
