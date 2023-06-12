@@ -14,7 +14,7 @@ max_int32=2_147_483_647
 
 BIGBRAIN = siibra.spaces['bigbrain']
 
-if not ("0.4a35" <= siibra.__version__ <= "0.4a47"):
+if not ("0.4a35" <= siibra.__version__ <= "0.4a51"):
     print(f"Warning: siibra.__version__ {siibra.__version__} siibra>=0.4a35,<=0.4a47, this module may not work properly.")
 
 import math
@@ -73,26 +73,7 @@ def run(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region]
     if region is None:
         return return_url + nav_string.format(encoded_nav='0.0.0', **zoom_kwargs)
     
-    # labelled_map = parc.get_map(space, siibra.MapType.LABELLED)
-    # assert labelled_map
-    
-    # hemisphere='left hemisphere' if 'left' in region.name else 'right hemisphere' if 'right' in region.name else 'whole brain'
-
-    # if space is BIGBRAIN:
-    #     voi = [v for v in region.volumes if v.space is BIGBRAIN]
-    #     assert len(voi) == 1, f"For big brain volumes, there must be 1 and only 1 region.volumes in big space"
-    #     hemisphere = voi[0].id
-    #     label = voi[0].detail.get("neuroglancer/precomputed", {}).get("labelIndex")
-    #     if label is None:
-    #         raise Exception(f"big brain cannot determine label index")
-    # else:
-    #     if len(region.labels) == 0:
-    #         raise IndexError(f'region has no labels. Cannot generate URL')
-    #     label=list(region.labels)[0]
-
-    # ng_id=get_ng_id(atlas.id,space.id,parc.id,hemisphere)
-
-    # return_url=f'{return_url}/r:{quote(ng_id)}::{encode_number(label)}'
+    return_url=f'{return_url}/rn:{get_hash(region.name)}'
 
     try:
         result_props=region.spatial_props(space)
@@ -259,8 +240,7 @@ backwards_compat_dict={
   }
 }
 
-def get_hash(atlas_id: str, t_id: str, parc_id: str, hemisphere: str):
-    full_string=f'{atlas_id}{t_id}{parc_id}{hemisphere}'
+def get_hash(full_string: str):
     return_val=0
     with np.errstate(over="ignore"):
         for char in full_string:
@@ -274,11 +254,4 @@ def get_hash(atlas_id: str, t_id: str, parc_id: str, hemisphere: str):
             return_val = int32(shifted_5 - return_val + ord(char))
             return_val = return_val & return_val
     hex_val = hex(return_val)
-    val = '_' + hex_val[3:]
-    return val
-
-def get_ng_id(atlas_id: str, t_id: str, parc_id: str, hemisphere: str):
-    backwards_key=backwards_compat_dict.get(atlas_id, {}).get(t_id, {}).get(parc_id, {}).get(hemisphere)
-    if backwards_key is not None:
-        return backwards_key
-    return get_hash(atlas_id, t_id, parc_id, hemisphere)
+    return hex_val[3:]
