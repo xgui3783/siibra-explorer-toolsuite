@@ -76,7 +76,7 @@ def run(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region]
     return_url=f'{return_url}/rn:{get_hash(region.name)}'
 
     try:
-        result_props=region.spatial_props(space, maptype='statistical')
+        result_props=region.spatial_props(space, maptype='labelled')
         if len(result_props.components) == 0:
             return return_url + nav_string.format(encoded_nav='0.0.0', **zoom_kwargs)
     except Exception as e:
