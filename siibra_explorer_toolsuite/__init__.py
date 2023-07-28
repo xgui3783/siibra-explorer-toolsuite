@@ -86,7 +86,6 @@ def run(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region]
         return return_url + nav_string.format(encoded_nav='0.0.0', **zoom_kwargs)
 
     centroid=result_props.components[0].centroid
-    print('centroid', region, centroid)
 
     encoded_centroid=separator.join([ encode_number(math.floor(val * 1e6)) for val in centroid ])
     return_url=return_url + nav_string.format(encoded_nav=encoded_centroid, **zoom_kwargs)
