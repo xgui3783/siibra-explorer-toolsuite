@@ -36,7 +36,7 @@ def decode_int(n):
     neg_flag = False
     if n[-1] == neg:
         neg_flag = True
-    n = n[:-1]
+        n = n[:-1]
 
     result = 0
     for char in n:
@@ -45,7 +45,6 @@ def decode_int(n):
 
     if neg_flag:
         result = result * -1
-
     return result
 
 def decode_number(n, float_flag=False):
