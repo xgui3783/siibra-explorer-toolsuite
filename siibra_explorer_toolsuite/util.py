@@ -31,3 +31,24 @@ def encode_int(n):
         if residual == 0:
             break
     return result
+
+def decode_int(n):
+    neg_flag = False
+    if n[-1] == neg:
+        neg_flag = True
+    n = n[:-1]
+
+    result = 0
+    for char in n:
+        val = cipher.index(char)
+        result = result * 64 + val
+
+    if neg_flag:
+        result = result * -1
+
+    return result
+
+def decode_number(n, float_flag=False):
+    if float_flag:
+        raise NotImplementedError
+    return decode_int(n)

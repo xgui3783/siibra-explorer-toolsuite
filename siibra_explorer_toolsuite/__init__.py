@@ -2,12 +2,18 @@ from typing import Optional
 import siibra
 from siibra.core.atlas import Atlas
 from siibra.core.space import Space
+from siibra.locations import BoundingBox, Point
 from siibra.core.parcellation import Parcellation
 from siibra.core.region import Region
 from siibra.features.feature import Feature
 from urllib.parse import quote
 from numpy import int32
 import numpy as np
+import re
+from dataclasses import dataclass
+
+
+class DecodeNavigationException(Exception): pass
 
 min_int32=-2_147_483_648
 max_int32=2_147_483_647
@@ -18,7 +24,7 @@ if not ("0.4a35" <= siibra.__version__ <= "0.4a51"):
     print(f"Warning: siibra.__version__ {siibra.__version__} siibra>=0.4a35,<=0.4a47, this module may not work properly.")
 
 import math
-from .util import encode_number,separator
+from .util import encode_number, separator, cipher, neg, decode_number
 
 default_root_url='https://atlases.ebrains.eu/viewer/'
 
@@ -90,7 +96,51 @@ def run(atlas: Atlas, space: Space, parc: Parcellation, region: Optional[Region]
     encoded_centroid=separator.join([ encode_number(math.floor(val * 1e6)) for val in centroid ])
     return_url=return_url + nav_string.format(encoded_nav=encoded_centroid, **zoom_kwargs)
     return return_url
+
+@dataclass
+class DecodedUrl:
+    bounding_box: BoundingBox
+
+def decode_url(url: str, vp_length=1000):
     
+    try:
+        space_match = re.search(r'/t:(?P<space_id>[^/]+)', url)
+        space_id = space_match.group("space_id")
+        space_id = space_id.replace(":", "/")
+        space = siibra.spaces[space_id]
+    except Exception as e:
+        raise DecodeNavigationException from e
+
+    nav_match = re.search(r'/@:(?P<navigation_str>.+)/?', url)
+    navigation_str = nav_match.group("navigation_str")
+    for char in navigation_str:
+        assert char in cipher or char in [neg, separator], f"char {char} not in cipher, nor separator/neg"
+    
+    try:
+        ori_enc, pers_ori_enc, pers_zoom_enc, pos_enc, zoomm_enc = navigation_str.split(f"{separator}{separator}")
+    except Exception as e:
+        raise DecodeNavigationException from e
+    
+    try:
+        x_enc, y_enc, z_enc = pos_enc.split(separator)
+        pos = [decode_number(val) for val in [x_enc, y_enc, z_enc]]
+        zoom = decode_number(zoomm_enc)
+
+        # zoom = nm/pixel
+        pt1 = [(coord - (zoom * vp_length / 2)) / 1e6 for coord in pos]
+        pt1 = Point(pt1, space)
+        
+        pt2 = [(coord + (zoom * vp_length / 2)) / 1e6 for coord in pos]
+        pt2 = Point(pt2, space)
+
+    except Exception as e:
+        raise DecodeNavigationException from e
+
+    
+    bbx = BoundingBox(pt1, pt2, space)
+    return DecodedUrl(bounding_box=bbx)
+    
+
 def main():
     pass
 
